@@ -1,0 +1,60 @@
+sudo docker login -u sugendh -p Password123
+
+#MySQL Build
+sudo docker build -t mysql_dev:1.$BUILD_ID .
+
+#WP Build 
+cd wp && sudo docker build -t wp_dev:1.$BUILD_ID .
+
+echo $BUILD_ID > /tmp/build_no.txt
+cat /tmp/build_no.txt
+
+#--
+#tag image
+sudo docker tag mysql_dev:1.$BUILD_ID 54.202.31.171:8082/mysql_dev:2.$BUILD_ID
+sudo docker tag mysql_dev:1.$BUILD_ID 54.202.31.171:8082/mysql_dev:latest
+
+sudo docker tag wp_dev:1.$BUILD_ID 54.202.31.171:8082/wp_dev:2.$BUILD_ID
+sudo docker tag wp_dev:1.$BUILD_ID 54.202.31.171:8082/wp_dev:latest
+
+#login to Hosted repo(Private Nexus Repo)
+sudo docker login 54.202.31.171:8082 -u admin -p admin123
+
+#Push to Nexus Hosted Repo
+sudo docker push 54.202.31.171:8082/mysql_dev:2.$BUILD_ID
+sudo docker push 54.202.31.171:8082/mysql_dev:latest
+
+sudo docker push 54.202.31.171:8082/wp_dev:2.$BUILD_ID
+sudo docker push 54.202.31.171:8082/wp_dev:latest
+
+#echo $BUILD_ID > /tmp/build_no.txt
+#cat /tmp/build_no.txt
+#docker pull 54.202.31.171:8082/mysql_dev:2.34
+
+#-------------------------------------------------
+echo "Push Images to DockerHub"
+
+#login to Dockerhub
+sudo docker login -u sugendh -p Password123
+
+#tag Images
+sudo docker tag mysql_dev:1.$BUILD_ID sugendh/mysql_dev:2.$BUILD_ID
+sudo docker tag mysql_dev:1.$BUILD_ID sugendh/mysql_dev:latest
+
+sudo docker tag wp_dev:1.$BUILD_ID sugendh/wp_dev:2.$BUILD_ID
+sudo docker tag wp_dev:1.$BUILD_ID sugendh/wp_dev:latest
+
+#Push to dockerhub
+sudo docker push sugendh/mysql_dev:2.$BUILD_ID
+sudo docker push sugendh/mysql_dev:latest
+
+
+sudo docker push sugendh/wp_dev:2.$BUILD_ID
+sudo docker push sugendh/wp_dev:latest
+
+#------------------------------
+#Start Containers
+
+sudo docker run --name mysql_1  -d 54.202.31.171:8082/mysql_dev:latest
+
+sudo docker run --name wordpress --link mysql_1:mysql -p 89:80 -d 54.202.31.171:8082/wp_dev:latest
