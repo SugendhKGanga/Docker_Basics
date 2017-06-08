@@ -1,0 +1,81 @@
+#Job1:Nuils and push to hub
+#############################
+svn checkout https://svn.edgewall.org/repos/trac/trunk
+
+
+docker -H tcp://localhost:2375 stop $(docker -H tcp://localhost:2375 ps -a -q)
+docker -H tcp://localhost:2375 rm $(docker -H tcp://localhost:2375 ps -a -q)
+
+chmod 755 docker-entrypoint.sh
+chmod 755 runtrac.sh
+chmod 755 test.sh
+
+docker -H tcp://localhost:2375 build -t trac:$BUILD_ID .
+
+sed -i 's/trac_image_variable/trac:'$BUILD_ID'/g' docker-compose.yaml
+docker-compose -H tcp://localhost:2375 up -d
+
+sleep 30
+#-------
+#commit container
+docker -H tcp://localhost:2375 commit trac-app trac:2.$BUILD_ID
+docker -H tcp://localhost:2375 commit mysql-for-trac mysql-for-trac:2.$BUILD_ID
+
+#tag image
+docker -H tcp://localhost:2375 tag trac:2.$BUILD_ID sugendh/trac:2.$BUILD_ID
+docker -H tcp://localhost:2375 tag trac:2.$BUILD_ID sugendh/trac:latest
+
+docker -H tcp://localhost:2375 tag mysql-for-trac:2.$BUILD_ID sugendh/mysql-for-trac:2.$BUILD_ID
+docker -H tcp://localhost:2375 tag mysql-for-trac:2.$BUILD_ID sugendh/mysql-for-trac:latest
+
+
+#login to dockercloud
+docker -H tcp://localhost:2375 login --username=sugendh --password=Password123
+
+docker -H tcp://localhost:2375 push sugendh/trac:2.$BUILD_ID
+docker -H tcp://localhost:2375 push sugendh/trac:latest
+
+
+docker -H tcp://localhost:2375 push sugendh/mysql-for-trac:2.$BUILD_ID
+docker -H tcp://localhost:2375 push sugendh/mysql-for-trac:latest
+
+
+#-------
+sudo ./runtrac.sh
+
+############
+Job2-CD
+###########################
+#login to dockercloud
+docker -H tcp://localhost:2375 login --username=sugendh --password=Password123
+#-------------------------
+
+#Deploy to Dockercloud
+docker-cloud service run --name mysql-for-trac sugendh/mysql-for-trac:latest
+./mysql-for-trac-status.sh
+
+#loadbalancer for db
+docker-cloud service run -p 92:80/tcp --role global --autorestart ALWAYS --link-service mysql-for-trac:mysql-for-trac --name loadbalancerdb dockercloud/haproxy
+./loadbalancerdb-status.sh
+
+docker-cloud service run --name trac-app --link loadbalancerdb:loadbalancerdb -e MYSQL_DATABASE=trac  -e MYSQL_PASSWORD=yourpassword sugendh/trac:latest
+./trac-app-status.sh
+
+#loadbalancer for trac-app
+docker-cloud service run -p 91:80/tcp --role global --autorestart ALWAYS --link-service trac-app:trac-app --name loadbalancertrac dockercloud/haproxy
+./loadbalancertrac-status.sh.sh
+
+#Scale
+docker-cloud service scale trac-app 10
+docker-cloud service scale mysql-for-trac 10
+
+
+#ckeck service status
+./mysql-for-trac-status.sh
+./trac-app-status.sh
+
+
+#initialize test trac envirnment
+sed -i 's/scaled_to/10/g' initenv.sh
+chmod 755 initenv.sh
+./initenv.sh
