@@ -1,0 +1,25 @@
+#Bring up wp using default images
+docker run --name mysqlwp112 -e MYSQL_ROOT_PASSWORD=wordpressdocker -it -d mysql
+docker run --name wordpress112 --link mysqlwp112:mysql -p 89:80 -it -d wordpress
+
+
+#---
+docker run --name mysqlwp_sugendh_mysql --expose=3306 -e MYSQL_ROOT_PASSWORD=password \
+-e MYSQL_DATABASE=wordpress \
+-e MYSQL_USER=wordpressuser \
+-e MYSQL_PASSWORD=password \
+-it -d wp_mysql:wp_mysql_sugendh
+
+docker run --name wordpress_sugendh_wordpress --link mysqlwp_sugendh_mysql:wp_mysql -p 80:80 \
+-e WORDPRESS_DB_NAME=wordpress \
+-e WORDPRESS_DB_USER=wordpressuser \
+-e WORDPRESS_DB_PASSWORD=password \
+-p 83:80 -it -d wp_front:wp_front_sugendh
+#---
+
+#add jenkins user to docker group
+sudo usermod -aG docker <user_name>
+
+#build a dockerfile
+docker build -t mysql_wp .
+
