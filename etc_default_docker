@@ -1,0 +1,2 @@
+DOCKER_OPTS="--dns 8.8.8.8 --dns 8.8.4.4 --selinux-enabled=true --insecure-registry=54.202.31.171:8082"
+#DOCKER_OPTS="--dns 8.8.8.8 --dns 8.8.4.4 --insecure-registry 10.18.24.192:8084 --insecure-registry 10.18.24.192:8082  -H tcp://0.0.0.0:4243  -H tcp://0.0.0.0:2375 -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock"
